@@ -35,3 +35,13 @@ How to Run
 
 Project Plan Link:
 https://docs.google.com/spreadsheets/d/1xD3NUfLA_d_U8XaIDkspsaAhGg6THhWJ7DUnp40U6vU/edit?usp=sharing
+
+
+Update Note
+March 17, 2026
+
+The repository was updated to reflect the original MotorPH Employee Data. 
+The employee records were revised to match the official dataset provided in the MotorPH requirements.
+
+
+
