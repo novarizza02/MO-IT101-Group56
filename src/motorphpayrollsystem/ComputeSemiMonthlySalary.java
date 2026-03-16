@@ -87,6 +87,9 @@ public class ComputeSemiMonthlySalary {
             String line = br.readLine(); // Skip header row.
 
             while ((line = br.readLine()) != null) {
+                
+                // Remove quotes from the employee CSV row before splitting.
+                line = line.replace("\"", "");
                 String[] parts = line.split(",");
 
                 // Skip incomplete rows.
