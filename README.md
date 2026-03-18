@@ -44,4 +44,10 @@ The repository was updated to reflect the original MotorPH Employee Data.
 The employee records were revised to match the official dataset provided in the MotorPH requirements.
 
 
+Update Note
+March 18, 2026
+
+The repository was updated to resolve merge conflict and retain non-rounded payroll output formatting across modules.
+
+
 
