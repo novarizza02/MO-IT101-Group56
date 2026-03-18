@@ -503,18 +503,18 @@ public class ComputeNetPay {
 
     /** Computes the employee share of PhilHealth contribution. */
     public static double computePhilHealth(double monthlyGrossPay) {
-        double salaryBasis;
 
-        // Use the minimum and maximum salary basis rules for PhilHealth.
-        if (monthlyGrossPay <= 10000) {
-            salaryBasis = 10000;
-        } else if (monthlyGrossPay >= 60000) {
-            salaryBasis = 60000;
+        double premium;
+
+        if (monthlyGrossPay >= 60000) {
+        // Apply maximum cap
+        premium = 60000 * 0.03;
         } else {
-            salaryBasis = monthlyGrossPay;
+        // Use actual gross pay
+        premium = monthlyGrossPay * 0.03;
         }
 
-        double premium = salaryBasis * 0.03;
+        // Return employee share (50%)
         return premium / 2;
     }
 
