@@ -48,6 +48,7 @@ Update Note
 March 18, 2026
 
 The repository was updated to resolve merge conflict and retain non-rounded payroll output formatting across modules.
+Updated PhilHealth calculation logic
 
 
 
