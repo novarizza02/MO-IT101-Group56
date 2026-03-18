@@ -87,6 +87,9 @@ public class CalculateHoursWorked {
             String line = br.readLine(); // Skip header row.
 
             while ((line = br.readLine()) != null) {
+                
+                // Remove quotes from the CSV row before splitting
+                line = line.replace("\"", "");
                 String[] parts = line.split(",");
 
                 // Skip incomplete rows.
@@ -293,9 +296,9 @@ public class CalculateHoursWorked {
                 System.out.println();
                 System.out.println("Employee Number       : " + employeeNumbers[i]);
                 System.out.println("Employee Name         : " + employeeNames[i]);
-                System.out.printf("Hourly Rate           : %.2f%n", hourlyRates[i]);
+                System.out.println("Hourly Rate           : " + hourlyRates[i]);
                 System.out.println("Days Worked           : " + daysWorked[i]);
-                System.out.printf("Total Hours Worked    : %.2f%n", totalHoursWorked[i]);
+                System.out.println("Total Hours Worked    : " + totalHoursWorked[i]);
                 System.out.println("--------------------------------------------------------------");
             }
         }

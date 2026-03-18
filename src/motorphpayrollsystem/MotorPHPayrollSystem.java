@@ -6,6 +6,7 @@ import java.util.Scanner;
  * MotorPHPayrollSystem.java
  *
  * This is the main entry point of the MotorPH Payroll System.
+
  * Displays the system menu and allows the user to access
  * different payroll features such as viewing employee
  * information, computing salaries, and computing net pay.

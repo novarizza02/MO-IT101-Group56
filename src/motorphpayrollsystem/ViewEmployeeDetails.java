@@ -12,10 +12,9 @@ import java.util.Scanner;
  * gross pay, deductions, and net pay for a selected month.
  *
  * Login Section:
- * The user must enter a valid username and password before accessing the feature.
- * Username: employee number (ex. 10001)
+ * Username: employee number (example: 10001)
  * Password: 12345
- * 
+ *
  * If the login credentials are incorrect, access to the feature
  * will be denied and the user will return to the menu.
  * 
@@ -31,8 +30,7 @@ public class ViewEmployeeDetails {
         System.out.println("==============================================================");
     }
 
-    //* Runs the employee self-service details page.
-
+    /** Runs the employee self-service details page. */
     public static void run(Scanner input) {
         displayHeader();
 
@@ -111,10 +109,15 @@ public class ViewEmployeeDetails {
             String line = br.readLine(); // Skip header row.
 
             while ((line = br.readLine()) != null) {
+
+                // Remove quotes from the CSV row before splitting.
+                // This helps avoid issues when values are enclosed in quotes.
+                line = line.replace("\"", "");
                 String[] parts = line.split(",");
 
                 // Skip incomplete rows.
-                if (parts.length < 19) {
+                // We only need the first few fields and the last field.
+                if (parts.length < 4) {
                     continue;
                 }
 
@@ -122,7 +125,9 @@ public class ViewEmployeeDetails {
                 String lastName = parts[1].trim();
                 String firstName = parts[2].trim();
                 String birthday = parts[3].trim();
-                double hourlyRate = Double.parseDouble(parts[18].trim());
+
+                // The last field in the employee CSV is treated as the hourly rate.
+                double hourlyRate = Double.parseDouble(parts[parts.length - 1].trim());
 
                 employeeNumbers[employeeCount] = empNumber;
                 employeeNames[employeeCount] = firstName + " " + lastName;
@@ -157,6 +162,7 @@ public class ViewEmployeeDetails {
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
 
+                // Skip incomplete attendance rows.
                 if (parts.length < 6) {
                     continue;
                 }
@@ -178,6 +184,12 @@ public class ViewEmployeeDetails {
 
                 int month = Integer.parseInt(dateParts[0]);
                 int day = Integer.parseInt(dateParts[1]);
+                int year = Integer.parseInt(dateParts[2]);
+
+                // Accept only attendance records within the project dataset coverage.
+                if (year != 2024 || month < 6 || month > 12) {
+                    continue;
+                }
 
                 // Process only the month selected by the employee.
                 if (month != selectedMonth) {
@@ -187,25 +199,27 @@ public class ViewEmployeeDetails {
                 int loginMinutes = convertTimeToMinutes(logIn);
                 int logoutMinutes = convertTimeToMinutes(logOut);
 
-                int officialStart = 480; // 8:00 AM
-                int officialEnd = 1020;  // 5:00 PM
+                int officialStart = 8 * 60; // 8:00 AM
+                int officialEnd = 17 * 60;  // 5:00 PM
 
                 int countedStart;
 
-                // Apply 10-minute grace period for login time.
-                if (loginMinutes <= 490) {
+                // Apply the 10-minute grace period:
+                // 8:00 AM to 8:10 AM is still counted as 8:00 AM.
+                if (loginMinutes <= ((8 * 60) + 10)) {
                     countedStart = officialStart;
                 } else {
                     countedStart = loginMinutes;
                 }
 
+                // Do not count work before the official shift start.
                 if (countedStart < officialStart) {
                     countedStart = officialStart;
                 }
 
                 int countedEnd = logoutMinutes;
 
-                // Do not count work beyond the official end of shift.
+                // Do not count work rendered after 5:00 PM.
                 if (countedEnd > officialEnd) {
                     countedEnd = officialEnd;
                 }
@@ -217,6 +231,7 @@ public class ViewEmployeeDetails {
                     workedMinutes -= 60;
                 }
 
+                // Prevent negative worked time values.
                 if (workedMinutes < 0) {
                     workedMinutes = 0;
                 }
@@ -244,7 +259,6 @@ public class ViewEmployeeDetails {
         // Compute payroll amounts for the logged-in employee.
         cutoff1GrossPay[employeeIndex] = cutoff1Hours[employeeIndex] * hourlyRates[employeeIndex];
         cutoff2GrossPay[employeeIndex] = cutoff2Hours[employeeIndex] * hourlyRates[employeeIndex];
-
         monthlyGrossPay[employeeIndex] = cutoff1GrossPay[employeeIndex] + cutoff2GrossPay[employeeIndex];
 
         sssDeduction[employeeIndex] = computeSSS(monthlyGrossPay[employeeIndex]);
@@ -277,29 +291,27 @@ public class ViewEmployeeDetails {
         if (cutoff1Days[employeeIndex] > 0 || cutoff2Days[employeeIndex] > 0) {
             System.out.println();
             System.out.println("1ST CUTOFF (" + getFirstCutoffCoverage(selectedMonth) + ")");
-            System.out.println("Days Worked           : " + cutoff1Days[employeeIndex]);
-            System.out.printf("Hours Worked          : %.2f%n", cutoff1Hours[employeeIndex]);
-            System.out.printf("Gross Pay             : %.2f%n", cutoff1GrossPay[employeeIndex]);
-            System.out.printf("Net Pay               : %.2f%n", cutoff1NetPay[employeeIndex]);
+            System.out.println("Days Worked            : " + cutoff1Days[employeeIndex]);
+            System.out.println("Hours Worked           : " + cutoff1Hours[employeeIndex]);
+            System.out.println("Gross Pay              : " + cutoff1GrossPay[employeeIndex]);
+            System.out.println("Net Pay                : " + cutoff1NetPay[employeeIndex]);
             System.out.println("--------------------------------------------");
 
             System.out.println("2ND CUTOFF (" + getSecondCutoffCoverage(selectedMonth) + ")");
-            System.out.println("Days Worked           : " + cutoff2Days[employeeIndex]);
-            System.out.printf("Hours Worked          : %.2f%n", cutoff2Hours[employeeIndex]);
-            System.out.printf("Gross Pay             : %.2f%n", cutoff2GrossPay[employeeIndex]);
+            System.out.println("Days Worked            : " + cutoff2Days[employeeIndex]);
+            System.out.println("Hours Worked           : " + cutoff2Hours[employeeIndex]);
+            System.out.println("Gross Pay              : " + cutoff2GrossPay[employeeIndex]);
+            System.out.println("Net Pay                : " + cutoff2NetPay[employeeIndex]);
             System.out.println("--------------------------------------------");
 
             System.out.println("MONTHLY SUMMARY");
-            System.out.printf("Monthly Gross Pay     : %.2f%n", monthlyGrossPay[employeeIndex]);
-            System.out.printf("SSS Deduction         : %.2f%n", sssDeduction[employeeIndex]);
-            System.out.printf("PhilHealth Deduction  : %.2f%n", philHealthDeduction[employeeIndex]);
-            System.out.printf("Pag-IBIG Deduction    : %.2f%n", pagIbigDeduction[employeeIndex]);
-            System.out.printf("Withholding Tax       : %.2f%n", taxDeduction[employeeIndex]);
-            System.out.printf("Total Deductions      : %.2f%n", totalDeductions[employeeIndex]);
-            System.out.printf("2nd Cutoff Net Pay    : %.2f%n", cutoff2NetPay[employeeIndex]);
+            System.out.println("Monthly Gross Pay      : " + monthlyGrossPay[employeeIndex]);
+            System.out.println("SSS Deduction          : " + sssDeduction[employeeIndex]);
+            System.out.println("PhilHealth Deduction   : " + philHealthDeduction[employeeIndex]);
+            System.out.println("Pag-IBIG Deduction     : " + pagIbigDeduction[employeeIndex]);
+            System.out.println("Withholding Tax        : " + taxDeduction[employeeIndex]);
+            System.out.println("Total Deductions       : " + totalDeductions[employeeIndex]);
             System.out.println("--------------------------------------------");
-            System.out.println();
-            System.out.println();
             System.out.println();
             System.out.println("==============================================================");
         } else {
@@ -323,7 +335,13 @@ public class ViewEmployeeDetails {
         System.out.println("11 = November");
         System.out.println("12 = December");
 
-        return readValidIntWithBack(input, "Enter month: ", "Invalid month. Please enter 0 or a month from 6 to 12.", 6, 12);
+        return readValidIntWithBack(
+                input,
+                "Enter month: ",
+                "Invalid month. Please enter 0 or a month from 6 to 12.",
+                6,
+                12
+        );
     }
 
     /** Pauses the program until the user presses Enter. */
@@ -398,31 +416,38 @@ public class ViewEmployeeDetails {
         return getMonthName(month) + " 16-end";
     }
 
-    /** Reads the SSS table from file and returns the matching contribution. */
+    //Computes SSS contribution using arrays.
+    
     public static double computeSSS(double monthlyGrossPay) {
-        String filePath = "EmployeeData/sss.csv";
+        double[] salaryFrom = {
+            0, 3250, 3750, 4250, 4750, 5250, 5750, 6250, 6750, 7250,
+            7750, 8250, 8750, 9250, 9750, 10250, 10750, 11250, 11750, 12250,
+            12750, 13250, 13750, 14250, 14750, 15250, 15750, 16250, 16750, 17250,
+            17750, 18250, 18750, 19250, 19750, 20250, 20750, 21250, 21750, 22250,
+            22750, 23250, 23750, 24250, 24750
+        };
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line = reader.readLine(); // Skip header row.
+        double[] salaryTo = {
+            3249.99, 3749.99, 4249.99, 4749.99, 5249.99, 5749.99, 6249.99, 6749.99, 7249.99, 7749.99,
+            8249.99, 8749.99, 9249.99, 9749.99, 10249.99, 10749.99, 11249.99, 11749.99, 12249.99, 12749.99,
+            13249.99, 13749.99, 14249.99, 14749.99, 15249.99, 15749.99, 16249.99, 16749.99, 17249.99, 17749.99,
+            18249.99, 18749.99, 19249.99, 19749.99, 20249.99, 20749.99, 21249.99, 21749.99, 22249.99, 22749.99,
+            23249.99, 23749.99, 24249.99, 24749.99, 999999.99
+        };
 
-            while ((line = reader.readLine()) != null) {
-                String[] data = line.split(",");
+        double[] contribution = {
+            135.00, 157.50, 180.00, 202.50, 225.00, 247.50, 270.00, 292.50, 315.00, 337.50,
+            360.00, 382.50, 405.00, 427.50, 450.00, 472.50, 495.00, 517.50, 540.00, 562.50,
+            585.00, 607.50, 630.00, 652.50, 675.00, 697.50, 720.00, 742.50, 765.00, 787.50,
+            810.00, 832.50, 855.00, 877.50, 900.00, 922.50, 945.00, 967.50, 990.00, 1012.50,
+            1035.00, 1057.50, 1080.00, 1102.50, 1125.00
+        };
 
-                if (data.length < 3) {
-                    continue;
-                }
-
-                double salaryFrom = Double.parseDouble(data[0]);
-                double salaryTo = Double.parseDouble(data[1]);
-                double contribution = Double.parseDouble(data[2]);
-
-                if (monthlyGrossPay >= salaryFrom && monthlyGrossPay <= salaryTo) {
-                    return contribution;
-                }
+        // Loop through each SSS bracket and return the matching contribution.
+        for (int i = 0; i < salaryFrom.length; i++) {
+            if (monthlyGrossPay >= salaryFrom[i] && monthlyGrossPay <= salaryTo[i]) {
+                return contribution[i];
             }
-
-        } catch (Exception e) {
-            System.out.println("Error reading sss.csv: " + e.getMessage());
         }
 
         return 0.0;
@@ -474,17 +499,14 @@ public class ViewEmployeeDetails {
         if (taxableIncome <= 66666) return 2500 + ((taxableIncome - 33333) * 0.25);
         if (taxableIncome <= 166666) return 10833 + ((taxableIncome - 66667) * 0.30);
         if (taxableIncome <= 666666) return 40833.33 + ((taxableIncome - 166667) * 0.32);
-
         return 200833.33 + ((taxableIncome - 666667) * 0.35);
     }
 
-    /** Computes the total monthly deductions. */
+    /** Computes total deductions. */
     public static double computeTotalDeductions(double monthlyGrossPay) {
-        double sss = computeSSS(monthlyGrossPay);
-        double philHealth = computePhilHealth(monthlyGrossPay);
-        double pagIbig = computePagIbig(monthlyGrossPay);
-        double tax = computeIncomeTax(monthlyGrossPay);
-
-        return sss + philHealth + pagIbig + tax;
+        return computeSSS(monthlyGrossPay)
+                + computePhilHealth(monthlyGrossPay)
+                + computePagIbig(monthlyGrossPay)
+                + computeIncomeTax(monthlyGrossPay);
     }
 }
