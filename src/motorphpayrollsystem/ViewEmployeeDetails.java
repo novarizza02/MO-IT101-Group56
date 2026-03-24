@@ -17,8 +17,7 @@ import java.util.Scanner;
  *
  * If the login credentials are incorrect, access to the feature
  * will be denied and the user will return to the menu.
- * 
- * 
+ *
  * This module is intended for employee self-view only.
  */
 public class ViewEmployeeDetails {
@@ -34,27 +33,27 @@ public class ViewEmployeeDetails {
     public static void run(Scanner input) {
         displayHeader();
 
-        String employeeFile = "EmployeeData/EmployeeDetails.csv";
-        String attendanceFile = "EmployeeData/AttendanceRecord.csv";
+        String employeeFilePath = MotorPHPayrollSystem.EMPLOYEE_FILE;
+        String attendanceFilePath = MotorPHPayrollSystem.ATTENDANCE_FILE;
 
         // Ask the employee to log in using employee number and password.
         System.out.println("Type 0 as username to go back to the main menu.");
         System.out.print("Enter username (Employee Number): ");
-        String username = input.nextLine().trim();
+        String enteredUsername = input.nextLine().trim();
 
-        if (username.equals("0")) {
+        if (enteredUsername.equals("0")) {
             System.out.println("Returning to main menu...");
             return;
         }
 
         System.out.print("Enter password: ");
-        String password = input.nextLine().trim();
+        String enteredPassword = input.nextLine().trim();
 
         int loggedInEmployeeNumber;
 
         // Convert the entered username into an integer employee number.
         try {
-            loggedInEmployeeNumber = Integer.parseInt(username);
+            loggedInEmployeeNumber = Integer.parseInt(enteredUsername);
         } catch (NumberFormatException e) {
             System.out.println("Invalid username. Username must be a valid employee number.");
             pressEnterToReturn(input);
@@ -62,7 +61,7 @@ public class ViewEmployeeDetails {
         }
 
         // Validate the employee password.
-        if (!password.equals("12345")) {
+        if (!enteredPassword.equals("12345")) {
             System.out.println("Invalid password.");
             pressEnterToReturn(input);
             return;
@@ -74,7 +73,7 @@ public class ViewEmployeeDetails {
             return;
         }
 
-        int maxEmployees = 100;
+        int maxEmployees = MotorPHPayrollSystem.MAX_EMPLOYEES;
 
         // Parallel arrays for employee information and computed payroll data.
         int[] employeeNumbers = new int[maxEmployees];
@@ -104,40 +103,36 @@ public class ViewEmployeeDetails {
         int employeeCount = 0;
 
         // Load employee details from the employee CSV file.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(employeeFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader employeeReader = new BufferedReader(new FileReader(employeeFilePath))) {
 
-            while ((line = br.readLine()) != null) {
+            String employeeLine = employeeReader.readLine(); // Skip header row.
 
-                // Remove quotes from the CSV row before splitting.
-                // This helps avoid issues when values are enclosed in quotes.
-                line = line.replace("\"", "");
-                String[] parts = line.split(",");
+            while ((employeeLine = employeeReader.readLine()) != null) {
+
+                // Remove quotation marks before splitting the CSV row.
+                employeeLine = employeeLine.replace("\"", "");
+                String[] employeeFields = employeeLine.split(",");
 
                 // Skip incomplete rows.
-                // We only need the first few fields and the last field.
-                if (parts.length < 4) {
+                if (employeeFields.length < 4) {
                     continue;
                 }
 
-                int empNumber = Integer.parseInt(parts[0].trim());
-                String lastName = parts[1].trim();
-                String firstName = parts[2].trim();
-                String birthday = parts[3].trim();
+                int employeeNumber = Integer.parseInt(employeeFields[0].trim());
+                String lastName = employeeFields[1].trim();
+                String firstName = employeeFields[2].trim();
+                String birthday = employeeFields[3].trim();
 
                 // The last field in the employee CSV is treated as the hourly rate.
-                double hourlyRate = Double.parseDouble(parts[parts.length - 1].trim());
+                double hourlyRate = Double.parseDouble(employeeFields[employeeFields.length - 1].trim());
 
-                employeeNumbers[employeeCount] = empNumber;
+                employeeNumbers[employeeCount] = employeeNumber;
                 employeeNames[employeeCount] = firstName + " " + lastName;
                 employeeBirthdays[employeeCount] = birthday;
                 hourlyRates[employeeCount] = hourlyRate;
 
                 employeeCount++;
             }
-
-            br.close();
 
         } catch (Exception e) {
             System.out.println("Error reading employee file: " + e.getMessage());
@@ -155,91 +150,51 @@ public class ViewEmployeeDetails {
         }
 
         // Read attendance records and compute payroll values for the logged-in employee only.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(attendanceFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader attendanceReader = new BufferedReader(new FileReader(attendanceFilePath))) {
+            String attendanceLine = attendanceReader.readLine(); // Skip header row.
 
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
+            while ((attendanceLine = attendanceReader.readLine()) != null) {
+                String[] attendanceFields = attendanceLine.split(",");
 
                 // Skip incomplete attendance rows.
-                if (parts.length < 6) {
+                if (attendanceFields.length < 6) {
                     continue;
                 }
 
-                int empNumber = Integer.parseInt(parts[0].trim());
-                String date = parts[3].trim();
-                String logIn = parts[4].trim();
-                String logOut = parts[5].trim();
+                int employeeNumber = Integer.parseInt(attendanceFields[0].trim());
+                String attendanceDate = attendanceFields[3].trim();
+                String logInTime = attendanceFields[4].trim();
+                String logOutTime = attendanceFields[5].trim();
 
                 // Ignore attendance records that do not belong to the logged-in employee.
-                if (empNumber != loggedInEmployeeNumber) {
+                if (employeeNumber != loggedInEmployeeNumber) {
                     continue;
                 }
 
-                String[] dateParts = date.split("/");
-                if (dateParts.length != 3) {
+                String[] dateTokens = attendanceDate.split("/");
+                if (dateTokens.length != 3) {
                     continue;
                 }
 
-                int month = Integer.parseInt(dateParts[0]);
-                int day = Integer.parseInt(dateParts[1]);
-                int year = Integer.parseInt(dateParts[2]);
+                int attendanceMonth = Integer.parseInt(dateTokens[0]);
+                int attendanceDay = Integer.parseInt(dateTokens[1]);
+                int attendanceYear = Integer.parseInt(dateTokens[2]);
 
                 // Accept only attendance records within the project dataset coverage.
-                if (year != 2024 || month < 6 || month > 12) {
+                if (attendanceYear != 2024 || attendanceMonth < 6 || attendanceMonth > 12) {
                     continue;
                 }
 
                 // Process only the month selected by the employee.
-                if (month != selectedMonth) {
+                if (attendanceMonth != selectedMonth) {
                     continue;
                 }
 
-                int loginMinutes = convertTimeToMinutes(logIn);
-                int logoutMinutes = convertTimeToMinutes(logOut);
-
-                int officialStart = 8 * 60; // 8:00 AM
-                int officialEnd = 17 * 60;  // 5:00 PM
-
-                int countedStart;
-
-                // Apply the 10-minute grace period:
-                // 8:00 AM to 8:10 AM is still counted as 8:00 AM.
-                if (loginMinutes <= ((8 * 60) + 10)) {
-                    countedStart = officialStart;
-                } else {
-                    countedStart = loginMinutes;
-                }
-
-                // Do not count work before the official shift start.
-                if (countedStart < officialStart) {
-                    countedStart = officialStart;
-                }
-
-                int countedEnd = logoutMinutes;
-
-                // Do not count work rendered after 5:00 PM.
-                if (countedEnd > officialEnd) {
-                    countedEnd = officialEnd;
-                }
-
-                int workedMinutes = countedEnd - countedStart;
-
-                // Deduct one hour for break if there is valid worked time.
-                if (workedMinutes > 0) {
-                    workedMinutes -= 60;
-                }
-
-                // Prevent negative worked time values.
-                if (workedMinutes < 0) {
-                    workedMinutes = 0;
-                }
-
-                double workedHours = workedMinutes / 60.0;
-
-                // Add the worked hours to cutoff 1 or cutoff 2 depending on the day.
-                if (day <= 15) {
+                // use shared method to compute worked hours
+                double workedHours = MotorPHPayrollSystem.computeWorkedHours(logInTime, logOutTime);
+                
+                // Add the worked hours to cutoff 1 or cutoff 2
+                if (attendanceDay <= 15) {
                     cutoff1Hours[employeeIndex] += workedHours;
                     cutoff1Days[employeeIndex]++;
                 } else {
@@ -247,8 +202,6 @@ public class ViewEmployeeDetails {
                     cutoff2Days[employeeIndex]++;
                 }
             }
-
-            br.close();
 
         } catch (Exception e) {
             System.out.println("Error reading attendance file: " + e.getMessage());
@@ -267,7 +220,7 @@ public class ViewEmployeeDetails {
         taxDeduction[employeeIndex] = computeIncomeTax(monthlyGrossPay[employeeIndex]);
         totalDeductions[employeeIndex] = computeTotalDeductions(monthlyGrossPay[employeeIndex]);
 
-        // In this design, first cutoff pay is shown without deductions.
+        // First cutoff pay is shown without deductions.
         cutoff1NetPay[employeeIndex] = cutoff1GrossPay[employeeIndex];
 
         // Monthly deductions are applied to the second cutoff pay.
@@ -294,14 +247,14 @@ public class ViewEmployeeDetails {
             System.out.println("Days Worked            : " + cutoff1Days[employeeIndex]);
             System.out.println("Hours Worked           : " + cutoff1Hours[employeeIndex]);
             System.out.println("Gross Pay              : " + cutoff1GrossPay[employeeIndex]);
-            System.out.println("Net Pay                : " + cutoff1NetPay[employeeIndex]);
+            System.out.println("1st Cutoff Net Pay     : " + cutoff1NetPay[employeeIndex]);
             System.out.println("--------------------------------------------");
 
             System.out.println("2ND CUTOFF (" + getSecondCutoffCoverage(selectedMonth) + ")");
             System.out.println("Days Worked            : " + cutoff2Days[employeeIndex]);
             System.out.println("Hours Worked           : " + cutoff2Hours[employeeIndex]);
             System.out.println("Gross Pay              : " + cutoff2GrossPay[employeeIndex]);
-            System.out.println("Net Pay                : " + cutoff2NetPay[employeeIndex]);
+            System.out.println("2nd Cutoff Net Pay     : " + cutoff2NetPay[employeeIndex]);
             System.out.println("--------------------------------------------");
 
             System.out.println("MONTHLY SUMMARY");
@@ -355,18 +308,18 @@ public class ViewEmployeeDetails {
     public static int readValidIntWithBack(Scanner input, String prompt, String errorMessage, int min, int max) {
         while (true) {
             System.out.print(prompt);
-            String line = input.nextLine().trim();
+            String userInputLine = input.nextLine().trim();
 
             try {
-                int value = Integer.parseInt(line);
+                int enteredValue = Integer.parseInt(userInputLine);
 
-                if (value == 0) {
+                if (enteredValue == 0) {
                     System.out.println("Returning to main menu...");
                     return 0;
                 }
 
-                if (value >= min && value <= max) {
-                    return value;
+                if (enteredValue >= min && enteredValue <= max) {
+                    return enteredValue;
                 } else {
                     System.out.println(errorMessage);
                 }
@@ -378,9 +331,9 @@ public class ViewEmployeeDetails {
 
     /** Finds the array index of the employee number. */
     public static int findEmployeeIndex(int[] employeeNumbers, int employeeCount, int employeeNumber) {
-        for (int i = 0; i < employeeCount; i++) {
-            if (employeeNumbers[i] == employeeNumber) {
-                return i;
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (employeeNumbers[employeeIndex] == employeeNumber) {
+                return employeeIndex;
             }
         }
         return -1;
@@ -416,8 +369,7 @@ public class ViewEmployeeDetails {
         return getMonthName(month) + " 16-end";
     }
 
-    //Computes SSS contribution using arrays.
-    
+    /** Computes SSS contribution using arrays. */
     public static double computeSSS(double monthlyGrossPay) {
         double[] salaryFrom = {
             0, 3250, 3750, 4250, 4750, 5250, 5750, 6250, 6750, 7250,
@@ -444,9 +396,9 @@ public class ViewEmployeeDetails {
         };
 
         // Loop through each SSS bracket and return the matching contribution.
-        for (int i = 0; i < salaryFrom.length; i++) {
-            if (monthlyGrossPay >= salaryFrom[i] && monthlyGrossPay <= salaryTo[i]) {
-                return contribution[i];
+        for (int bracketIndex = 0; bracketIndex < salaryFrom.length; bracketIndex++) {
+            if (monthlyGrossPay >= salaryFrom[bracketIndex] && monthlyGrossPay <= salaryTo[bracketIndex]) {
+                return contribution[bracketIndex];
             }
         }
 
@@ -471,28 +423,28 @@ public class ViewEmployeeDetails {
 
     /** Computes the employee share of Pag-IBIG. */
     public static double computePagIbig(double monthlyGrossPay) {
-        double contribution;
+        double contributionAmount;
 
         if (monthlyGrossPay <= 1500) {
-            contribution = monthlyGrossPay * 0.01;
+            contributionAmount = monthlyGrossPay * 0.01;
         } else {
-            contribution = monthlyGrossPay * 0.02;
+            contributionAmount = monthlyGrossPay * 0.02;
         }
 
-        if (contribution > 100) {
-            contribution = 100;
+        if (contributionAmount > 100) {
+            contributionAmount = 100;
         }
 
-        return contribution;
+        return contributionAmount;
     }
 
     /** Computes withholding tax based on taxable income. */
     public static double computeIncomeTax(double monthlyGrossPay) {
-        double sss = computeSSS(monthlyGrossPay);
-        double philHealth = computePhilHealth(monthlyGrossPay);
-        double pagIbig = computePagIbig(monthlyGrossPay);
+        double sssContribution = computeSSS(monthlyGrossPay);
+        double philHealthContribution = computePhilHealth(monthlyGrossPay);
+        double pagIbigContribution = computePagIbig(monthlyGrossPay);
 
-        double taxableIncome = monthlyGrossPay - sss - philHealth - pagIbig;
+        double taxableIncome = monthlyGrossPay - sssContribution - philHealthContribution - pagIbigContribution;
 
         if (taxableIncome <= 20832) return 0;
         if (taxableIncome <= 33332) return (taxableIncome - 20833) * 0.20;

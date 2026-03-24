@@ -6,7 +6,6 @@ import java.util.Scanner;
  * MotorPHPayrollSystem.java
  *
  * This is the main entry point of the MotorPH Payroll System.
-
  * Displays the system menu and allows the user to access
  * different payroll features such as viewing employee
  * information, computing salaries, and computing net pay.
@@ -17,6 +16,70 @@ import java.util.Scanner;
  * - Option 5 closes the program.
  */
 public class MotorPHPayrollSystem {
+
+    // ==============================
+    // CONSTANTS (used across system)
+    // ==============================
+    public static final int MAX_EMPLOYEES = 100;
+    public static final String EMPLOYEE_FILE = "EmployeeData/EmployeeDetails.csv";
+    public static final String ATTENDANCE_FILE = "EmployeeData/AttendanceRecord.csv";
+
+    /**
+     * Computes worked hours based on login and logout time.
+     * Rules applied:
+     * - official work hours only: 8:00 AM to 5:00 PM
+     * - 10-minute grace period
+     * - 1-hour unpaid break
+     * - maximum of 8 hours per day
+     */
+    public static double computeWorkedHours(String logInTime, String logOutTime) {
+
+        int loginMinutes = MotorPHPayrollSystem.convertTimeToMinutes(logInTime);
+        int logoutMinutes = MotorPHPayrollSystem.convertTimeToMinutes(logOutTime);
+
+        int officialStart = 8 * 60; // 8:00 AM
+        int officialEnd = 17 * 60;  // 5:00 PM
+
+        int countedStart;
+
+        // Apply grace period: 8:00 AM to 8:10 AM is counted as 8:00 AM
+        if (loginMinutes <= ((8 * 60) + 10)) {
+            countedStart = officialStart;
+        } else {
+            countedStart = loginMinutes;
+        }
+
+        // Do not count work before official shift start
+        if (countedStart < officialStart) {
+            countedStart = officialStart;
+        }
+
+        int countedEnd = logoutMinutes;
+
+        // Do not count work after official shift end
+        if (countedEnd > officialEnd) {
+            countedEnd = officialEnd;
+        }
+
+        int workedMinutes = countedEnd - countedStart;
+
+        // Deduct 1 hour unpaid break if there is valid worked time
+        if (workedMinutes > 0) {
+            workedMinutes -= 60;
+        }
+
+        // Prevent negative worked time
+        if (workedMinutes < 0) {
+            workedMinutes = 0;
+        }
+
+        double workedHours = workedMinutes / 60.0;
+
+        // Prevent counted work hours from exceeding 8 hours in one day
+        workedHours = Math.min(workedHours, 8.0);
+
+        return workedHours;
+    }
 
     /**
      * Displays the main menu of the system.
@@ -36,13 +99,6 @@ public class MotorPHPayrollSystem {
 
     /**
      * Reads a whole-number input and checks if it is within the allowed range.
-     *
-     * @param input the Scanner object used for user input
-     * @param prompt message shown before reading input
-     * @param errorMessage message shown when input is outside the valid range
-     * @param min lowest accepted value
-     * @param max highest accepted value
-     * @return a valid integer within the given range
      */
     public static int readValidIntInRange(Scanner input, String prompt, String errorMessage, int min, int max) {
         while (true) {
@@ -52,14 +108,12 @@ public class MotorPHPayrollSystem {
             try {
                 int value = Integer.parseInt(line);
 
-                // Accept the value only if it is inside the allowed range.
                 if (value >= min && value <= max) {
                     return value;
                 } else {
                     System.out.println(errorMessage);
                 }
             } catch (NumberFormatException e) {
-                // This happens when the user types text or a non-whole number.
                 System.out.println("Invalid input. Please enter a whole number only.");
             }
         }
@@ -67,9 +121,6 @@ public class MotorPHPayrollSystem {
 
     /**
      * Validates the payroll staff login before restricted features are opened.
-     *
-     * @param input the Scanner object used for user input
-     * @return true if login is successful; otherwise false
      */
     public static boolean payrollStaffLogin(Scanner input) {
         System.out.println();
@@ -78,23 +129,33 @@ public class MotorPHPayrollSystem {
         System.out.print("Enter username: ");
         String username = input.nextLine().trim();
 
-        // Allow the user to cancel login and return to the menu.
+        // Check if user entered "0" to cancel login and go back
         if (username.equals("0")) {
             System.out.println("Returning to main menu...");
-            return false;
+            return false; // stop login process and return to menu
         }
 
         System.out.print("Enter password: ");
         String password = input.nextLine().trim();
 
-        // Check the hard-coded payroll staff account credentials.
+        // Check if both username and password match the required credentials
         if (username.equals("payroll_staff") && password.equals("12345")) {
             System.out.println("Login successful.");
-            return true;
+            return true; // allow access
         } else {
             System.out.println("Invalid username or password.");
-            return false;
+            return false; // deny access
         }
+    }
+
+    /**
+     * Converts a time string in HH:MM format into total minutes.
+     */
+    public static int convertTimeToMinutes(String time) {
+        String[] timeParts = time.split(":");
+        int hour = Integer.parseInt(timeParts[0]);
+        int minute = Integer.parseInt(timeParts[1]);
+        return (hour * 60) + minute;
     }
 
     /**
@@ -105,7 +166,7 @@ public class MotorPHPayrollSystem {
         Scanner input = new Scanner(System.in);
         int option = 0;
 
-        // Keep looping until the user chooses option 5.
+         // Loop runs until user selects option 5 (Exit)
         while (option != 5) {
             displayMenu();
 
@@ -117,9 +178,9 @@ public class MotorPHPayrollSystem {
                     5
             );
 
+            // Execute action based on selected option
             switch (option) {
-                case 1:
-                    // Payroll staff login is required before opening the hours-worked module.
+                case 1: // Only payroll staff can access this feature
                     if (payrollStaffLogin(input)) {
                         System.out.println();
                         System.out.println("Opening CalculateHoursWorked...");
@@ -127,8 +188,7 @@ public class MotorPHPayrollSystem {
                     }
                     break;
 
-                case 2:
-                    // Payroll staff login is required before opening the salary module.
+                case 2: // Payroll staff login required
                     if (payrollStaffLogin(input)) {
                         System.out.println();
                         System.out.println("Opening ComputeSemiMonthlySalary...");
@@ -136,8 +196,7 @@ public class MotorPHPayrollSystem {
                     }
                     break;
 
-                case 3:
-                    // Payroll staff login is required before opening the net-pay module.
+                case 3: // Payroll staff login required
                     if (payrollStaffLogin(input)) {
                         System.out.println();
                         System.out.println("Opening ComputeNetPay...");
@@ -145,25 +204,21 @@ public class MotorPHPayrollSystem {
                     }
                     break;
 
-                case 4:
-                    // Employees can directly open their own details page.
+                case 4: // Employees can view their details 
                     System.out.println();
                     System.out.println("Opening ViewEmployeeDetails...");
                     ViewEmployeeDetails.run(input);
                     break;
 
-                case 5:
-                    // End the program.
+                case 5: // Exit the program
                     System.out.println("Exiting MotorPH Payroll System.");
                     break;
 
-                default:
-                    // This block should not normally run because input is already validated.
+                default: // Safety check 
                     System.out.println("Invalid option. Please select 1 to 5 only.");
             }
         }
 
-        // Close the Scanner only when the whole program is about to end.
         input.close();
     }
 }

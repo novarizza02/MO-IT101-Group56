@@ -12,69 +12,68 @@ import java.util.Scanner;
  * computes the total hours worked for a chosen payroll period,
  * and displays the result either for all employees or for one employee only.
  *
- *
  * Business rules used in this program:
  * - Work hours counted are from 8:00 AM to 5:00 PM only.
  * - A grace period is applied from 8:00 AM to 8:10 AM.
  * - A 1-hour break is deducted for each workday.
  * - Lateness starts at 8:11 AM onward.
- * 
+ *
  * Login Section:
  * The user must enter a valid username and password before accessing the feature.
  * Username: payroll_staff
  * Password: 12345
- * 
+ *
  * If the login credentials are incorrect, access to the feature
  * will be denied and the user will return to the menu.
- * 
  */
 public class CalculateHoursWorked {
 
-    //Runs the complete hours-worked feature.
-     
+    // Runs the complete hours-worked feature.
     public static void run(Scanner input) {
-        String employeeFile = "EmployeeData/EmployeeDetails.csv";
-        String attendanceFile = "EmployeeData/AttendanceRecord.csv";
+        String employeeFilePath = MotorPHPayrollSystem.EMPLOYEE_FILE;
+        String attendanceFilePath = MotorPHPayrollSystem.ATTENDANCE_FILE;
 
         System.out.println("==============================================================");
         System.out.println("               MOTORPH PAYROLL PERIOD SELECTION               ");
         System.out.println("==============================================================");
 
-        // Ask the user which month to process.
+        // Ask user to select month (returns 0 if user chooses to go back)
         int selectedMonth = promptMonth(input);
         if (selectedMonth == 0) {
             return;
         }
 
-        // Ask the user which payroll cutoff to process.
+        // Ask user to select cutoff (1st or 2nd half of month)
         int selectedCutoff = promptCutoff(input);
         if (selectedCutoff == 0) {
             return;
         }
 
-        // Ask whether to show all employees or only one employee.
-        int viewOption = promptViewOption(input);
-        if (viewOption == 0) {
+        // Ask how the report should be viewed 
+        int reportViewOption = promptViewOption(input);
+        if (reportViewOption == 0) {
             return;
         }
 
-        int searchedEmployeeNumber = 0;
-
-        // If the user selected "one employee only", ask for the employee number.
-        if (viewOption == 2) {
+        int searchedEmployeeNumber = 0; // Variable to store employee number if user selects specific employee
+ 
+        // If user chose "specific employee", ask for employee number
+        if (reportViewOption == 2) {
             searchedEmployeeNumber = promptEmployeeNumber(input);
             if (searchedEmployeeNumber == 0) {
                 return;
             }
         }
 
-        int maxEmployees = 100;
+        // Maximum number of employees allowed in the system
+        int maxEmployees = MotorPHPayrollSystem.MAX_EMPLOYEES;
 
-        // Parallel arrays used to store employee data and computed results.
+        // Arrays to store employee data
         int[] employeeNumbers = new int[maxEmployees];
         String[] employeeNames = new String[maxEmployees];
         double[] hourlyRates = new double[maxEmployees];
 
+        // Arrays to store computed payroll data
         double[] totalHoursWorked = new double[maxEmployees];
         int[] totalLateMinutes = new int[maxEmployees];
         int[] daysWorked = new int[maxEmployees];
@@ -82,173 +81,131 @@ public class CalculateHoursWorked {
         int employeeCount = 0;
 
         // Read employee basic details from the employee CSV file.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(employeeFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader employeeReader = new BufferedReader(new FileReader(employeeFilePath))) {
 
-            while ((line = br.readLine()) != null) {
-                
-                // Remove quotes from the CSV row before splitting
-                line = line.replace("\"", "");
-                String[] parts = line.split(",");
+            String employeeLine = employeeReader.readLine(); // Skip header row.
 
-                // Skip incomplete rows.
-                if (parts.length < 3) {
-                    continue;
+            while ((employeeLine = employeeReader.readLine()) != null) {
+
+                employeeLine = employeeLine.replace("\"", ""); // remove quotes from CSV
+                String[] employeeFields = employeeLine.split(","); // split row into columns
+
+                if (employeeFields.length < 3) {
+                    continue; // skip invalid/incomplete rows
                 }
 
-                int employeeNumber = Integer.parseInt(parts[0].trim());
-                String lastName = parts[1].trim();
-                String firstName = parts[2].trim();
-                double hourlyRate = Double.parseDouble(parts[parts.length - 1].trim());
+                // Extract employee data
+                int employeeNumber = Integer.parseInt(employeeFields[0].trim());
+                String lastName = employeeFields[1].trim();
+                String firstName = employeeFields[2].trim();
+                double hourlyRate = Double.parseDouble(employeeFields[employeeFields.length - 1].trim());
 
+                // Store values into arrays
                 employeeNumbers[employeeCount] = employeeNumber;
                 employeeNames[employeeCount] = firstName + " " + lastName;
                 hourlyRates[employeeCount] = hourlyRate;
 
-                employeeCount++;
+                employeeCount++; // move to next index
             }
 
-            br.close();
-            
-        //Handle possible errors when reading and processing the employee file
         } catch (IOException e) {
             System.out.println("Error reading employee file: " + e.getMessage());
             pressEnterToReturn(input);
-            return;
+            return; // stop process if file error
         } catch (NumberFormatException e) {
             System.out.println("Error: Invalid number format found in employee file.");
             pressEnterToReturn(input);
-            return;
+            return; // stop if data format is wrong
         }
 
-        // If only one employee is requested, check first if the employee exists.
-        if (viewOption == 2) {
+        // If viewing one employee, check if employee exists
+        if (reportViewOption == 2) {
             int employeeIndex = findEmployeeIndex(employeeNumbers, employeeCount, searchedEmployeeNumber);
 
             if (employeeIndex == -1) {
                 System.out.println("Employee number not found.");
                 pressEnterToReturn(input);
-                return;
+                return; // stop if employee not found
             }
         }
 
         // Read attendance records and compute hours worked.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(attendanceFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader attendanceReader = new BufferedReader(new FileReader(attendanceFilePath))) {
+            String attendanceLine = attendanceReader.readLine(); // Skip header row.
 
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
+            while ((attendanceLine = attendanceReader.readLine()) != null) {
+                String[] attendanceFields = attendanceLine.split(",");
 
-                // Skip incomplete attendance rows.
-                if (parts.length < 6) {
+                if (attendanceFields.length < 6) {
+                    continue; // skip invalid rows
+                }
+
+                // Extract attendance data
+                int employeeNumber = Integer.parseInt(attendanceFields[0].trim());
+                String attendanceDate = attendanceFields[3].trim();
+                String logInTime = attendanceFields[4].trim();
+                String logOutTime = attendanceFields[5].trim();
+
+                // If specific employee selected, skip others
+                if (reportViewOption == 2 && employeeNumber != searchedEmployeeNumber) {
                     continue;
                 }
 
-                int employeeNumber = Integer.parseInt(parts[0].trim());
-                String date = parts[3].trim();
-                String logIn = parts[4].trim();
-                String logOut = parts[5].trim();
-
-                // When viewing one employee only, ignore all other employees.
-                if (viewOption == 2 && employeeNumber != searchedEmployeeNumber) {
+                // Split date into month/day/year
+                String[] dateTokens = attendanceDate.split("/");
+                if (dateTokens.length != 3) {
                     continue;
                 }
 
-                String[] dateParts = date.split("/");
-                if (dateParts.length != 3) {
+                int attendanceMonth = Integer.parseInt(dateTokens[0]);
+                int attendanceDay = Integer.parseInt(dateTokens[1]);
+                int attendanceYear = Integer.parseInt(dateTokens[2]);
+
+                // Filter only valid months/year (June–December 2024)
+                if (attendanceYear != 2024 || attendanceMonth < 6 || attendanceMonth > 12) {
                     continue;
                 }
 
-                int month = Integer.parseInt(dateParts[0]);
-                int day = Integer.parseInt(dateParts[1]);
-                int year = Integer.parseInt(dateParts[2]);
-
-                // Accept only the covered attendance period in the dataset.
-                if (year != 2024 || month < 6 || month > 12) {
+                // Filter selected month
+                if (attendanceMonth != selectedMonth) {
                     continue;
                 }
 
-                // Process only the selected month.
-                if (month != selectedMonth) {
-                    continue;
-                }
-
-                // Filter attendance records according to the selected cutoff.
+                // Filter based on cutoff (1–15 or 16–end)
                 if (selectedCutoff == 1) {
-                    if (day < 1 || day > 15) {
+                    if (attendanceDay < 1 || attendanceDay > 15) {
                         continue;
                     }
                 } else {
-                    if (day < 16) {
+                    if (attendanceDay < 16) {
                         continue;
                     }
                 }
 
+                // Find employee index in array
                 int employeeIndex = findEmployeeIndex(employeeNumbers, employeeCount, employeeNumber);
                 if (employeeIndex == -1) {
-                    continue;
+                    continue; // skip if employee not found
                 }
 
-                int loginMinutes = convertTimeToMinutes(logIn);
-                int logoutMinutes = convertTimeToMinutes(logOut);
+                // Duplication reduced: shared worked-hours computation
+                int loginMinutes = MotorPHPayrollSystem.convertTimeToMinutes(logInTime);
+                // Compute worked hours (already includes rules like 8AM–5PM, lunch deduction)
+                double workedHours = MotorPHPayrollSystem.computeWorkedHours(logInTime, logOutTime);
 
-                int officialStart = 8 * 60; // 8:00 AM
-                int officialEnd = 17 * 60;  // 5:00 PM
+                int officialStart = 8 * 60; // 8:00 AM in minutes
 
-                int countedStart;
-
-                // Apply the 10-minute grace period for login time.
-                if (loginMinutes <= ((8 * 60) + 10)) {
-                    countedStart = officialStart;
-                } else {
-                    countedStart = loginMinutes;
-                }
-
-                // Do not allow the counted start time to be earlier than 8:00 AM.
-                if (countedStart < officialStart) {
-                    countedStart = officialStart;
-                }
-
-                int countedEnd = logoutMinutes;
-
-                // Do not count work time beyond 5:00 PM.
-                if (countedEnd > officialEnd) {
-                    countedEnd = officialEnd;
-                }
-
-                // Compute total worked minutes for the day.
-                int workedMinutes = countedEnd - countedStart;
-
-                if (workedMinutes < 0) {
-                    workedMinutes = 0;
-                }
-
-                // Deduct the 1-hour unpaid break.
-                if (workedMinutes > 0) {
-                    workedMinutes = workedMinutes - 60;
-                }
-
-                if (workedMinutes < 0) {
-                    workedMinutes = 0;
-                }
-
-                double workedHours = workedMinutes / 60.0;
-
-                // Count late minutes only when login is 8:11 AM or later.
                 int lateMinutes = 0;
+                // Apply lateness rule (8:11 AM onwards)
                 if (loginMinutes >= ((8 * 60) + 11)) {
                     lateMinutes = loginMinutes - officialStart;
                 }
 
-                // Add the computed values to the employee totals.
+                // Accumulate totals
                 totalHoursWorked[employeeIndex] += workedHours;
                 totalLateMinutes[employeeIndex] += lateMinutes;
                 daysWorked[employeeIndex]++;
             }
-
-            br.close();
 
         } catch (IOException e) {
             System.out.println("Error reading attendance file: " + e.getMessage());
@@ -260,7 +217,7 @@ public class CalculateHoursWorked {
             return;
         }
 
-        // Display the report header and the selected filters.
+        // Display report header
         System.out.println();
         System.out.println("==============================================================");
         System.out.println("                 MOTORPH HOURS WORKED REPORT                  ");
@@ -273,7 +230,8 @@ public class CalculateHoursWorked {
         System.out.println("Grace Period Applied  : 8:00 AM to 8:10 AM");
         System.out.println("Late Rule Applied     : 8:11 AM onwards");
 
-        if (viewOption == 1) {
+        // Show report type
+        if (reportViewOption == 1) {
             System.out.println("Report View           : All Employees");
         } else {
             System.out.println("Report View           : One Employee Only");
@@ -284,51 +242,51 @@ public class CalculateHoursWorked {
 
         boolean hasRecord = false;
 
-        // Show the computed result for each employee that matches the chosen view.
-        for (int i = 0; i < employeeCount; i++) {
-            if (viewOption == 2 && employeeNumbers[i] != searchedEmployeeNumber) {
+        // Loop through employees and display results
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (reportViewOption == 2 && employeeNumbers[employeeIndex] != searchedEmployeeNumber) {
                 continue;
             }
 
-            if (daysWorked[i] > 0) {
+            if (daysWorked[employeeIndex] > 0) {
                 hasRecord = true;
 
                 System.out.println();
-                System.out.println("Employee Number       : " + employeeNumbers[i]);
-                System.out.println("Employee Name         : " + employeeNames[i]);
-                System.out.println("Hourly Rate           : " + hourlyRates[i]);
-                System.out.println("Days Worked           : " + daysWorked[i]);
-                System.out.println("Total Hours Worked    : " + totalHoursWorked[i]);
+                System.out.println("Employee Number       : " + employeeNumbers[employeeIndex]);
+                System.out.println("Employee Name         : " + employeeNames[employeeIndex]);
+                System.out.println("Hourly Rate           : " + hourlyRates[employeeIndex]);
+                System.out.println("Days Worked           : " + daysWorked[employeeIndex]);
+                System.out.println("Total Hours Worked    : " + totalHoursWorked[employeeIndex]);
                 System.out.println("--------------------------------------------------------------");
             }
         }
 
+        // If no records found
         if (!hasRecord) {
             System.out.println();
             System.out.println("No attendance records found for the selected payroll period.");
         }
 
-        // Simple validation block to check if the computed values are correct.
+        // Validate computation correctness
         boolean computationCorrect = true;
 
-        for (int i = 0; i < employeeCount; i++) {
-            if (viewOption == 2 && employeeNumbers[i] != searchedEmployeeNumber) {
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (reportViewOption == 2 && employeeNumbers[employeeIndex] != searchedEmployeeNumber) {
                 continue;
             }
 
-            if (totalHoursWorked[i] < 0) {
+            if (totalHoursWorked[employeeIndex] < 0) {
                 computationCorrect = false;
             }
 
-            if (totalLateMinutes[i] < 0) {
+            if (totalLateMinutes[employeeIndex] < 0) {
                 computationCorrect = false;
             }
 
-            if (daysWorked[i] > 0) {
-                double maxPossibleHours = daysWorked[i] * 8.0;
+            if (daysWorked[employeeIndex] > 0) {
+                double maxPossibleHours = daysWorked[employeeIndex] * 8.0;
 
-                // Total worked hours should not be greater than 8 hours per workday.
-                if (totalHoursWorked[i] > maxPossibleHours) {
+                if (totalHoursWorked[employeeIndex] > maxPossibleHours) {
                     computationCorrect = false;
                 }
             }
@@ -395,24 +353,22 @@ public class CalculateHoursWorked {
         input.nextLine();
     }
 
-    /**
-     * Reads a whole number with an option to return to the main menu by entering 0.
-     */
+    /** Reads a whole number with an option to return to the main menu by entering 0. */
     public static int readValidIntWithBack(Scanner input, String prompt, String errorMessage, int min, int max) {
         while (true) {
             System.out.print(prompt);
-            String line = input.nextLine().trim();
+            String userInputLine = input.nextLine().trim();
 
             try {
-                int value = Integer.parseInt(line);
+                int enteredValue = Integer.parseInt(userInputLine);
 
-                if (value == 0) {
+                if (enteredValue == 0) {
                     System.out.println("Returning to main menu...");
                     return 0;
                 }
 
-                if (value >= min && value <= max) {
-                    return value;
+                if (enteredValue >= min && enteredValue <= max) {
+                    return enteredValue;
                 } else {
                     System.out.println(errorMessage);
                 }
@@ -422,24 +378,22 @@ public class CalculateHoursWorked {
         }
     }
 
-    /**
-     * Reads a positive whole number with an option to return to the main menu by entering 0.
-     */
+    /** Reads a positive whole number with an option to return to the main menu by entering 0. */
     public static int readPositiveIntWithBack(Scanner input, String prompt, String errorMessage) {
         while (true) {
             System.out.print(prompt);
-            String line = input.nextLine().trim();
+            String userInputLine = input.nextLine().trim();
 
             try {
-                int value = Integer.parseInt(line);
+                int enteredValue = Integer.parseInt(userInputLine);
 
-                if (value == 0) {
+                if (enteredValue == 0) {
                     System.out.println("Returning to main menu...");
                     return 0;
                 }
 
-                if (value > 0) {
-                    return value;
+                if (enteredValue > 0) {
+                    return enteredValue;
                 } else {
                     System.out.println(errorMessage);
                 }
@@ -451,20 +405,12 @@ public class CalculateHoursWorked {
 
     /** Finds the array index of a specific employee number. */
     public static int findEmployeeIndex(int[] employeeNumbers, int employeeCount, int employeeNumber) {
-        for (int i = 0; i < employeeCount; i++) {
-            if (employeeNumbers[i] == employeeNumber) {
-                return i;
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (employeeNumbers[employeeIndex] == employeeNumber) {
+                return employeeIndex;
             }
         }
         return -1;
-    }
-
-    /** Converts a time string in HH:MM format into total minutes. */
-    public static int convertTimeToMinutes(String time) {
-        String[] timeParts = time.split(":");
-        int hour = Integer.parseInt(timeParts[0]);
-        int minute = Integer.parseInt(timeParts[1]);
-        return (hour * 60) + minute;
     }
 
     /** Returns the month name based on the month number. */

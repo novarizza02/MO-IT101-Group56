@@ -17,23 +17,21 @@ import java.util.Scanner;
  * Salary in this module is based on total hours worked only.
  * Government deductions are not applied here because they are handled
  * in the net pay module.
- * 
- *  * Login Section:
+ *
+ * Login Section:
  * The user must enter a valid username and password before accessing the feature.
  * Username: payroll_staff
  * Password: 12345
- * 
+ *
  * If the login credentials are incorrect, access to the feature
  * will be denied and the user will return to the menu.
- * 
  */
 public class ComputeSemiMonthlySalary {
 
-    //Runs the semi-monthly salary feature.
-     
+    // Runs the semi-monthly salary feature.
     public static void run(Scanner input) {
-        String employeeFile = "EmployeeData/EmployeeDetails.csv";
-        String attendanceFile = "EmployeeData/AttendanceRecord.csv";
+        String employeeFilePath = MotorPHPayrollSystem.EMPLOYEE_FILE;
+        String attendanceFilePath = MotorPHPayrollSystem.ATTENDANCE_FILE;
 
         System.out.println("==============================================================");
         System.out.println("              MOTORPH SEMI-MONTHLY SALARY REPORT              ");
@@ -52,22 +50,22 @@ public class ComputeSemiMonthlySalary {
         }
 
         // Ask whether to show all employees or only one employee.
-        int viewOption = promptViewOption(input);
-        if (viewOption == 0) {
+        int reportViewOption = promptViewOption(input);
+        if (reportViewOption == 0) {
             return;
         }
 
         int searchedEmployeeNumber = 0;
 
         // If only one employee is requested, ask for the employee number.
-        if (viewOption == 2) {
+        if (reportViewOption == 2) {
             searchedEmployeeNumber = promptEmployeeNumber(input);
             if (searchedEmployeeNumber == 0) {
                 return;
             }
         }
 
-        int maxEmployees = 100;
+        int maxEmployees = MotorPHPayrollSystem.MAX_EMPLOYEES;
 
         // Parallel arrays used to store employee details and computed salary values.
         int[] employeeNumbers = new int[maxEmployees];
@@ -82,34 +80,32 @@ public class ComputeSemiMonthlySalary {
         int employeeCount = 0;
 
         // Read employee details from the employee file.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(employeeFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader employeeReader = new BufferedReader(new FileReader(employeeFilePath))) {
 
-            while ((line = br.readLine()) != null) {
-                
-                // Remove quotes from the employee CSV row before splitting.
-                line = line.replace("\"", "");
-                String[] parts = line.split(",");
+            String employeeLine = employeeReader.readLine(); // Skip header row.
+
+            while ((employeeLine = employeeReader.readLine()) != null) {
+
+                // Remove quotation marks before splitting the CSV row.
+                employeeLine = employeeLine.replace("\"", "");
+                String[] employeeFields = employeeLine.split(",");
 
                 // Skip incomplete rows.
-                if (parts.length < 3) {
+                if (employeeFields.length < 3) {
                     continue;
                 }
 
-                int employeeNumber = Integer.parseInt(parts[0].trim());
-                String lastName = parts[1].trim();
-                String firstName = parts[2].trim();
-                double hourlyRate = Double.parseDouble(parts[parts.length - 1].trim());
-
+                int employeeNumber = Integer.parseInt(employeeFields[0].trim());
+                String lastName = employeeFields[1].trim();
+                String firstName = employeeFields[2].trim();
+                double hourlyRate = Double.parseDouble(employeeFields[employeeFields.length - 1].trim());
+                
                 employeeNumbers[employeeCount] = employeeNumber;
                 employeeNames[employeeCount] = firstName + " " + lastName;
                 hourlyRates[employeeCount] = hourlyRate;
 
                 employeeCount++;
             }
-
-            br.close();
 
         } catch (IOException e) {
             System.out.println("Error reading employee file: " + e.getMessage());
@@ -122,7 +118,7 @@ public class ComputeSemiMonthlySalary {
         }
 
         // If one employee is requested, verify that the employee number exists.
-        if (viewOption == 2) {
+        if (reportViewOption == 2) {
             int employeeIndex = findEmployeeIndex(employeeNumbers, employeeCount, searchedEmployeeNumber);
 
             if (employeeIndex == -1) {
@@ -133,54 +129,53 @@ public class ComputeSemiMonthlySalary {
         }
 
         // Read attendance records and compute total worked hours per employee.
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(attendanceFile));
-            String line = br.readLine(); // Skip header row.
+        try (BufferedReader attendanceReader = new BufferedReader(new FileReader(attendanceFilePath))) {
+            String attendanceLine = attendanceReader.readLine(); // Skip header row.
 
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
+            while ((attendanceLine = attendanceReader.readLine()) != null) {
+                String[] attendanceFields = attendanceLine.split(",");
 
                 // Skip incomplete rows.
-                if (parts.length < 6) {
+                if (attendanceFields.length < 6) {
                     continue;
                 }
 
-                int employeeNumber = Integer.parseInt(parts[0].trim());
-                String date = parts[3].trim();
-                String logIn = parts[4].trim();
-                String logOut = parts[5].trim();
+                int employeeNumber = Integer.parseInt(attendanceFields[0].trim());
+                String attendanceDate = attendanceFields[3].trim();
+                String logInTime = attendanceFields[4].trim();
+                String logOutTime = attendanceFields[5].trim();
 
                 // If viewing one employee only, ignore other employees.
-                if (viewOption == 2 && employeeNumber != searchedEmployeeNumber) {
+                if (reportViewOption == 2 && employeeNumber != searchedEmployeeNumber) {
                     continue;
                 }
 
-                String[] dateParts = date.split("/");
-                if (dateParts.length != 3) {
+                String[] dateTokens = attendanceDate.split("/");
+                if (dateTokens.length != 3) {
                     continue;
                 }
 
-                int month = Integer.parseInt(dateParts[0]);
-                int day = Integer.parseInt(dateParts[1]);
-                int year = Integer.parseInt(dateParts[2]);
+                int attendanceMonth = Integer.parseInt(dateTokens[0]);
+                int attendanceDay = Integer.parseInt(dateTokens[1]);
+                int attendanceYear = Integer.parseInt(dateTokens[2]);
 
                 // Accept only attendance records within the project dataset coverage.
-                if (year != 2024 || month < 6 || month > 12) {
+                if (attendanceYear != 2024 || attendanceMonth < 6 || attendanceMonth > 12) {
                     continue;
                 }
 
                 // Process only the chosen month.
-                if (month != selectedMonth) {
+                if (attendanceMonth != selectedMonth) {
                     continue;
                 }
 
                 // Filter records based on the chosen cutoff.
                 if (selectedCutoff == 1) {
-                    if (day < 1 || day > 15) {
+                    if (attendanceDay < 1 || attendanceDay > 15) {
                         continue;
                     }
                 } else {
-                    if (day < 16) {
+                    if (attendanceDay < 16) {
                         continue;
                     }
                 }
@@ -190,52 +185,16 @@ public class ComputeSemiMonthlySalary {
                     continue;
                 }
 
-                int loginMinutes = convertTimeToMinutes(logIn);
-                int logoutMinutes = convertTimeToMinutes(logOut);
+                // get login minutes for lateness
+                int loginMinutes = MotorPHPayrollSystem.convertTimeToMinutes(logInTime);
 
-                int officialStart = 8 * 60; // 8:00 AM
-                int officialEnd = 17 * 60;  // 5:00 PM
+                // compute worked hours using shared method
+                double workedHours = MotorPHPayrollSystem.computeWorkedHours(logInTime, logOutTime);
 
-                int countedStart;
+                // define official start for lateness
+                int officialStart = 8 * 60;
 
-                // Apply grace period: arrivals from 8:00 to 8:10 are counted as 8:00.
-                if (loginMinutes <= ((8 * 60) + 10)) {
-                    countedStart = officialStart;
-                } else {
-                    countedStart = loginMinutes;
-                }
-
-                // Prevent counting time before the official shift start.
-                if (countedStart < officialStart) {
-                    countedStart = officialStart;
-                }
-
-                int countedEnd = logoutMinutes;
-
-                // Prevent counting time after the official shift end.
-                if (countedEnd > officialEnd) {
-                    countedEnd = officialEnd;
-                }
-
-                int workedMinutes = countedEnd - countedStart;
-
-                // Prevent negative work time values.
-                if (workedMinutes < 0) {
-                    workedMinutes = 0;
-                }
-
-                // Deduct one hour for the unpaid break when there is valid work time.
-                if (workedMinutes > 0) {
-                    workedMinutes = workedMinutes - 60;
-                }
-
-                if (workedMinutes < 0) {
-                    workedMinutes = 0;
-                }
-
-                double workedHours = workedMinutes / 60.0;
-
-                // Count late minutes for checking and validation purposes.
+                // compute late minutes for checking and validation purposes.
                 int lateMinutes = 0;
                 if (loginMinutes >= ((8 * 60) + 11)) {
                     lateMinutes = loginMinutes - officialStart;
@@ -245,8 +204,6 @@ public class ComputeSemiMonthlySalary {
                 totalLateMinutes[employeeIndex] += lateMinutes;
                 daysWorked[employeeIndex]++;
             }
-
-            br.close();
 
         } catch (IOException e) {
             System.out.println("Error reading attendance file: " + e.getMessage());
@@ -259,11 +216,11 @@ public class ComputeSemiMonthlySalary {
         }
 
         // Compute semi-monthly salary using total hours worked multiplied by hourly rate.
-        for (int i = 0; i < employeeCount; i++) {
-            semiMonthlySalary[i] = totalHoursWorked[i] * hourlyRates[i];
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            semiMonthlySalary[employeeIndex] = totalHoursWorked[employeeIndex] * hourlyRates[employeeIndex];
 
-            if (semiMonthlySalary[i] < 0) {
-                semiMonthlySalary[i] = 0;
+            if (semiMonthlySalary[employeeIndex] < 0) {
+                semiMonthlySalary[employeeIndex] = 0;
             }
         }
 
@@ -280,7 +237,7 @@ public class ComputeSemiMonthlySalary {
         System.out.println("Grace Period Applied  : 8:00 AM to 8:10 AM");
         System.out.println("Late Rule Applied     : 8:11 AM onwards");
 
-        if (viewOption == 1) {
+        if (reportViewOption == 1) {
             System.out.println("Report View           : All Employees");
         } else {
             System.out.println("Report View           : One Employee Only");
@@ -292,21 +249,21 @@ public class ComputeSemiMonthlySalary {
         boolean hasRecord = false;
 
         // Show the salary result for each matching employee.
-        for (int i = 0; i < employeeCount; i++) {
-            if (viewOption == 2 && employeeNumbers[i] != searchedEmployeeNumber) {
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (reportViewOption == 2 && employeeNumbers[employeeIndex] != searchedEmployeeNumber) {
                 continue;
             }
 
-            if (daysWorked[i] > 0) {
+            if (daysWorked[employeeIndex] > 0) {
                 hasRecord = true;
 
                 System.out.println();
-                System.out.println("Employee Number       : " + employeeNumbers[i]);
-                System.out.println("Employee Name         : " + employeeNames[i]);
-                System.out.println("Hourly Rate           : " + hourlyRates[i]);
-                System.out.println("Days Worked           : " + daysWorked[i]);
-                System.out.println("Total Hours Worked    : " + totalHoursWorked[i]);
-                System.out.println("Semi-Monthly Salary   : " + semiMonthlySalary[i]);
+                System.out.println("Employee Number       : " + employeeNumbers[employeeIndex]);
+                System.out.println("Employee Name         : " + employeeNames[employeeIndex]);
+                System.out.println("Hourly Rate           : " + hourlyRates[employeeIndex]);
+                System.out.println("Days Worked           : " + daysWorked[employeeIndex]);
+                System.out.println("Total Hours Worked    : " + totalHoursWorked[employeeIndex]);
+                System.out.println("Semi-Monthly Salary   : " + semiMonthlySalary[employeeIndex]);
                 System.out.println("--------------------------------------------------------------");
             }
         }
@@ -316,40 +273,39 @@ public class ComputeSemiMonthlySalary {
             System.out.println("No attendance records found for the selected payroll period.");
         }
 
-        
         // Basic validation checks to confirm that the computations are reasonable.
         // Validate the computed results by checking for invalid values,
         // unrealistic total hours worked, and incorrect salary computation.
         boolean computationCorrect = true;
 
-        for (int i = 0; i < employeeCount; i++) {
-            if (viewOption == 2 && employeeNumbers[i] != searchedEmployeeNumber) {
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (reportViewOption == 2 && employeeNumbers[employeeIndex] != searchedEmployeeNumber) {
                 continue;
             }
 
-            if (totalHoursWorked[i] < 0) {
+            if (totalHoursWorked[employeeIndex] < 0) {
                 computationCorrect = false;
             }
 
-            if (totalLateMinutes[i] < 0) {
+            if (totalLateMinutes[employeeIndex] < 0) {
                 computationCorrect = false;
             }
 
-            if (semiMonthlySalary[i] < 0) {
+            if (semiMonthlySalary[employeeIndex] < 0) {
                 computationCorrect = false;
             }
 
-            if (daysWorked[i] > 0) {
-                double maxPossibleHours = daysWorked[i] * 8.0;
+            if (daysWorked[employeeIndex] > 0) {
+                double maxPossibleHours = daysWorked[employeeIndex] * 8.0;
 
                 // Total worked hours should not exceed 8 hours per day.
-                if (totalHoursWorked[i] > maxPossibleHours) {
+                if (totalHoursWorked[employeeIndex] > maxPossibleHours) {
                     computationCorrect = false;
                 }
             }
 
-            double expectedSalary = totalHoursWorked[i] * hourlyRates[i];
-            if (Math.abs(semiMonthlySalary[i] - expectedSalary) > 0.0001) {
+            double expectedSalary = totalHoursWorked[employeeIndex] * hourlyRates[employeeIndex];
+            if (Math.abs(semiMonthlySalary[employeeIndex] - expectedSalary) > 0.0001) {
                 computationCorrect = false;
             }
         }
@@ -419,18 +375,18 @@ public class ComputeSemiMonthlySalary {
     public static int readValidIntWithBack(Scanner input, String prompt, String errorMessage, int min, int max) {
         while (true) {
             System.out.print(prompt);
-            String line = input.nextLine().trim();
+            String userInputLine = input.nextLine().trim();
 
             try {
-                int value = Integer.parseInt(line);
+                int enteredValue = Integer.parseInt(userInputLine);
 
-                if (value == 0) {
+                if (enteredValue == 0) {
                     System.out.println("Returning to main menu...");
                     return 0;
                 }
 
-                if (value >= min && value <= max) {
-                    return value;
+                if (enteredValue >= min && enteredValue <= max) {
+                    return enteredValue;
                 } else {
                     System.out.println(errorMessage);
                 }
@@ -444,18 +400,18 @@ public class ComputeSemiMonthlySalary {
     public static int readPositiveIntWithBack(Scanner input, String prompt, String errorMessage) {
         while (true) {
             System.out.print(prompt);
-            String line = input.nextLine().trim();
+            String userInputLine = input.nextLine().trim();
 
             try {
-                int value = Integer.parseInt(line);
+                int enteredValue = Integer.parseInt(userInputLine);
 
-                if (value == 0) {
+                if (enteredValue == 0) {
                     System.out.println("Returning to main menu...");
                     return 0;
                 }
 
-                if (value > 0) {
-                    return value;
+                if (enteredValue > 0) {
+                    return enteredValue;
                 } else {
                     System.out.println(errorMessage);
                 }
@@ -467,9 +423,9 @@ public class ComputeSemiMonthlySalary {
 
     /** Finds the array index of the given employee number. */
     public static int findEmployeeIndex(int[] employeeNumbers, int employeeCount, int employeeNumber) {
-        for (int i = 0; i < employeeCount; i++) {
-            if (employeeNumbers[i] == employeeNumber) {
-                return i;
+        for (int employeeIndex = 0; employeeIndex < employeeCount; employeeIndex++) {
+            if (employeeNumbers[employeeIndex] == employeeNumber) {
+                return employeeIndex;
             }
         }
         return -1;
