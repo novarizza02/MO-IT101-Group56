@@ -50,5 +50,18 @@ March 18, 2026
 The repository was updated to resolve merge conflict and retain non-rounded payroll output formatting across modules.
 Updated PhilHealth calculation logic
 
+Update Note
+March 24, 2026
+The repository was update to reflect the following improvements:
+- Renamed variables to more descriptive names and added inline comments to clarify logic
+- Replaced hardcoded values with constants for file paths and system limits
+- Updated file handling to use try-with-resources for safer and cleaner implementation
+- Identified repeated worked-hours computation logic and created a reusable computeWorkedHours() method in MotorPHPayrollSystem, then replaced duplicated blocks in all modules
+- Moved shared logic (worked-hours computation) into the main system class and updated all files to call this method instead of duplicating code
+- Standardized naming across files using clear and consistent variable names
+- Added validation to prevent negative values and ensured proper limits on work hours
+- Replaced direct input parsing with validated methods (readValidIntWithBack, readPositiveIntWithBack) to handle invalid inputs and prevent runtime errors
+
+
 
 
