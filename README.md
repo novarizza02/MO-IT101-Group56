@@ -37,20 +37,20 @@ Project Plan Link:
 https://docs.google.com/spreadsheets/d/1xD3NUfLA_d_U8XaIDkspsaAhGg6THhWJ7DUnp40U6vU/edit?usp=sharing
 
 
-Update Note
+Update Note:
 March 17, 2026
 
 The repository was updated to reflect the original MotorPH Employee Data. 
 The employee records were revised to match the official dataset provided in the MotorPH requirements.
 
 
-Update Note
+Update Note:
 March 18, 2026
 
 The repository was updated to resolve merge conflict and retain non-rounded payroll output formatting across modules.
 Updated PhilHealth calculation logic
 
-Update Note
+Update Note:
 March 24, 2026
 The repository was update to reflect the following improvements:
 - Renamed variables to more descriptive names and added inline comments to clarify logic
